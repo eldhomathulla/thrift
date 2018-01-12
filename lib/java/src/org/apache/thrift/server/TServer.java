@@ -19,8 +19,14 @@
 
 package org.apache.thrift.server;
 
+import java.util.Optional;
+
+import org.apache.thrift.ProcessFunction;
+import org.apache.thrift.TCache;
+import org.apache.thrift.TMultiplexedProcessor;
 import org.apache.thrift.TProcessor;
 import org.apache.thrift.TProcessorFactory;
+import org.apache.thrift.TServiceClient;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TProtocolFactory;
 import org.apache.thrift.transport.TServerTransport;
@@ -32,146 +38,155 @@ import org.apache.thrift.transport.TTransportFactory;
  */
 public abstract class TServer {
 
-  public static class Args extends AbstractServerArgs<Args> {
-    public Args(TServerTransport transport) {
-      super(transport);
-    }
-  }
+	public static class Args extends AbstractServerArgs<Args> {
+		public Args(TServerTransport transport) {
+			super(transport);
+		}
+	}
 
-  public static abstract class AbstractServerArgs<T extends AbstractServerArgs<T>> {
-    final TServerTransport serverTransport;
-    TProcessorFactory processorFactory;
-    TTransportFactory inputTransportFactory = new TTransportFactory();
-    TTransportFactory outputTransportFactory = new TTransportFactory();
-    TProtocolFactory inputProtocolFactory = new TBinaryProtocol.Factory();
-    TProtocolFactory outputProtocolFactory = new TBinaryProtocol.Factory();
+	public static abstract class AbstractServerArgs<T extends AbstractServerArgs<T>> {
+		final TServerTransport serverTransport;
+		TProcessorFactory processorFactory;
+		TTransportFactory inputTransportFactory = new TTransportFactory();
+		TTransportFactory outputTransportFactory = new TTransportFactory();
+		TProtocolFactory inputProtocolFactory = new TBinaryProtocol.Factory();
+		TProtocolFactory outputProtocolFactory = new TBinaryProtocol.Factory();
+		Optional<TCache> cache = Optional.empty();
 
-    public AbstractServerArgs(TServerTransport transport) {
-      serverTransport = transport;
-    }
+		public AbstractServerArgs(TServerTransport transport) {
+			serverTransport = transport;
+		}
 
-    public T processorFactory(TProcessorFactory factory) {
-      this.processorFactory = factory;
-      return (T) this;
-    }
+		public T processorFactory(TProcessorFactory factory) {
+			this.processorFactory = factory;
+			return (T) this;
+		}
 
-    public T processor(TProcessor processor) {
-      this.processorFactory = new TProcessorFactory(processor);
-      return (T) this;
-    }
+		public T processor(TProcessor processor) {
+			this.processorFactory = new TProcessorFactory(processor);
+			return (T) this;
+		}
 
-    public T transportFactory(TTransportFactory factory) {
-      this.inputTransportFactory = factory;
-      this.outputTransportFactory = factory;
-      return (T) this;
-    }
+		@SuppressWarnings("unchecked")
+		public T cache(TCache cache) {
+			this.cache = Optional.of(cache);
+			return (T) this;
+		}
 
-    public T inputTransportFactory(TTransportFactory factory) {
-      this.inputTransportFactory = factory;
-      return (T) this;
-    }
+		public T transportFactory(TTransportFactory factory) {
+			this.inputTransportFactory = factory;
+			this.outputTransportFactory = factory;
+			return (T) this;
+		}
 
-    public T outputTransportFactory(TTransportFactory factory) {
-      this.outputTransportFactory = factory;
-      return (T) this;
-    }
+		public T inputTransportFactory(TTransportFactory factory) {
+			this.inputTransportFactory = factory;
+			return (T) this;
+		}
 
-    public T protocolFactory(TProtocolFactory factory) {
-      this.inputProtocolFactory = factory;
-      this.outputProtocolFactory = factory;
-      return (T) this;
-    }
+		public T outputTransportFactory(TTransportFactory factory) {
+			this.outputTransportFactory = factory;
+			return (T) this;
+		}
 
-    public T inputProtocolFactory(TProtocolFactory factory) {
-      this.inputProtocolFactory = factory;
-      return (T) this;
-    }
+		public T protocolFactory(TProtocolFactory factory) {
+			this.inputProtocolFactory = factory;
+			this.outputProtocolFactory = factory;
+			return (T) this;
+		}
 
-    public T outputProtocolFactory(TProtocolFactory factory) {
-      this.outputProtocolFactory = factory;
-      return (T) this;
-    }
-  }
+		public T inputProtocolFactory(TProtocolFactory factory) {
+			this.inputProtocolFactory = factory;
+			return (T) this;
+		}
 
-  /**
-   * Core processor
-   */
-  protected TProcessorFactory processorFactory_;
+		public T outputProtocolFactory(TProtocolFactory factory) {
+			this.outputProtocolFactory = factory;
+			return (T) this;
+		}
+	}
 
-  /**
-   * Server transport
-   */
-  protected TServerTransport serverTransport_;
+	/**
+	 * Core processor
+	 */
+	protected TProcessorFactory processorFactory_;
 
-  /**
-   * Input Transport Factory
-   */
-  protected TTransportFactory inputTransportFactory_;
+	/**
+	 * Server transport
+	 */
+	protected TServerTransport serverTransport_;
 
-  /**
-   * Output Transport Factory
-   */
-  protected TTransportFactory outputTransportFactory_;
+	/**
+	 * Input Transport Factory
+	 */
+	protected TTransportFactory inputTransportFactory_;
 
-  /**
-   * Input Protocol Factory
-   */
-  protected TProtocolFactory inputProtocolFactory_;
+	/**
+	 * Output Transport Factory
+	 */
+	protected TTransportFactory outputTransportFactory_;
 
-  /**
-   * Output Protocol Factory
-   */
-  protected TProtocolFactory outputProtocolFactory_;
+	/**
+	 * Input Protocol Factory
+	 */
+	protected TProtocolFactory inputProtocolFactory_;
 
-  private boolean isServing;
+	/**
+	 * Output Protocol Factory
+	 */
+	protected TProtocolFactory outputProtocolFactory_;
 
-  protected TServerEventHandler eventHandler_;
+	private boolean isServing;
 
-  // Flag for stopping the server
-  // Please see THRIFT-1795 for the usage of this flag
-  protected volatile boolean stopped_ = false;
+	protected TServerEventHandler eventHandler_;
 
-  protected TServer(AbstractServerArgs args) {
-    processorFactory_ = args.processorFactory;
-    serverTransport_ = args.serverTransport;
-    inputTransportFactory_ = args.inputTransportFactory;
-    outputTransportFactory_ = args.outputTransportFactory;
-    inputProtocolFactory_ = args.inputProtocolFactory;
-    outputProtocolFactory_ = args.outputProtocolFactory;
-  }
+	// Flag for stopping the server
+	// Please see THRIFT-1795 for the usage of this flag
+	protected volatile boolean stopped_ = false;
 
-  /**
-   * The run method fires up the server and gets things going.
-   */
-  public abstract void serve();
+	protected TServer(AbstractServerArgs args) {
+		processorFactory_ = args.processorFactory;
+		serverTransport_ = args.serverTransport;
+		inputTransportFactory_ = args.inputTransportFactory;
+		outputTransportFactory_ = args.outputTransportFactory;
+		inputProtocolFactory_ = args.inputProtocolFactory;
+		outputProtocolFactory_ = args.outputProtocolFactory;
+		ProcessFunction.setCache(args.cache);
+	}
 
-  /**
-   * Stop the server. This is optional on a per-implementation basis. Not
-   * all servers are required to be cleanly stoppable.
-   */
-  public void stop() {}
+	/**
+	 * The run method fires up the server and gets things going.
+	 */
+	public abstract void serve();
 
-  public boolean isServing() {
-    return isServing;
-  }
+	/**
+	 * Stop the server. This is optional on a per-implementation basis. Not all
+	 * servers are required to be cleanly stoppable.
+	 */
+	public void stop() {
+	}
 
-  protected void setServing(boolean serving) {
-    isServing = serving;
-  }
+	public boolean isServing() {
+		return isServing;
+	}
 
-  public void setServerEventHandler(TServerEventHandler eventHandler) {
-    eventHandler_ = eventHandler;
-  }
+	protected void setServing(boolean serving) {
+		isServing = serving;
+	}
 
-  public TServerEventHandler getEventHandler() {
-    return eventHandler_;
-  }
+	public void setServerEventHandler(TServerEventHandler eventHandler) {
+		eventHandler_ = eventHandler;
+	}
 
-  public boolean getShouldStop() {
-    return this.stopped_;
-  }
+	public TServerEventHandler getEventHandler() {
+		return eventHandler_;
+	}
 
-  public void setShouldStop(boolean shouldStop) {
-    this.stopped_ = shouldStop;
-  }
+	public boolean getShouldStop() {
+		return this.stopped_;
+	}
+
+	public void setShouldStop(boolean shouldStop) {
+		this.stopped_ = shouldStop;
+	}
 }

@@ -95,7 +95,7 @@
   </target>
 
   <target name="compile" depends="init">
-    <javac compiler="modern" srcdir="${src}" destdir="${build.dir}" source="1.5" target="1.5"
+    <javac compiler="modern" srcdir="${src}" destdir="${build.dir}" source="1.8" target="1.8"
     debug="true" classpathref="compile.classpath" includeantruntime="false" encoding="UTF-8">
       <compilerarg value="-Xlint:unchecked"/>
     </javac>
@@ -360,6 +360,7 @@
       <dependency groupId="javax.servlet" artifactId="servlet-api" version="${servlet.version}" scope="provided"/>
       <dependency groupId="org.apache.httpcomponents" artifactId="httpclient" version="${httpclient.version}"/>
       <dependency groupId="org.apache.httpcomponents" artifactId="httpcore" version="${httpcore.version}"/>
+      <dependency groupId="com.google.code.gson" artifactId="gson" version="${gson.version}"/>
     </artifact:pom>
 
     <!-- Generate the pom file -->
