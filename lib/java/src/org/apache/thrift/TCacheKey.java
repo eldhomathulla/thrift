@@ -8,6 +8,7 @@ import java.util.Map;
 public class TCacheKey {
 
 	private Map<String, Object> args = new HashMap<String, Object>();
+	private static final String FUNCTION_NAME = "function_name";
 
 	public TCacheKey() {
 
@@ -15,6 +16,7 @@ public class TCacheKey {
 
 	public TCacheKey(TBase argsTbase) {
 		Field[] argsFields = argsTbase.getClass().getFields();
+		args.put(FUNCTION_NAME, argsTbase.getClass().getSimpleName().replaceFirst("_args$", ""));
 		Arrays.stream(argsFields).forEach((Field field) -> {
 			try {
 				this.getArgs().put(field.getName(), field.get(argsTbase));
@@ -43,5 +45,10 @@ public class TCacheKey {
 	@Override
 	public int hashCode() {
 		return args.hashCode();
+	}
+
+	@Override
+	public String toString() {
+		return "TCacheKey: \n"+args.toString();
 	}
 }

@@ -1,7 +1,6 @@
 package org.apache.thrift;
 
 import java.lang.reflect.Field;
-import java.util.Arrays;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
@@ -41,7 +40,7 @@ public abstract class ProcessFunction<I, T extends TBase> {
 		try {
 			result = cache.map((TCache tCache) -> tCache.read(new TCacheKey(args))).orElseGet(() -> {
 				try {
-					return processResult(args, oprot, iface, seqid);
+					return processResult(args, iface, oprot, seqid);
 				} catch (TException e) {
 					throw new RuntimeException(e);
 				}
@@ -57,10 +56,12 @@ public abstract class ProcessFunction<I, T extends TBase> {
 		}
 	}
 
-	public TBase processResult(T args, TProtocol oprot, I iface, int seqid) throws TException {
+	public TBase processResult(T args, I iface, TProtocol oprot, int seqid) throws TException {
 		try {
 			TBase result = getResult(iface, args);
-			cache.ifPresent((TCache tCache) -> tCache.write(new TCacheKey(args), result));
+			if (!isEmpty(result)) {
+				cache.ifPresent((TCache tCache) -> tCache.write(new TCacheKey(args), result));
+			}
 			return result;
 		} catch (TException tex) {
 			LOGGER.error("Internal error processing " + getMethodName(), tex);
@@ -72,6 +73,15 @@ public abstract class ProcessFunction<I, T extends TBase> {
 				handleException(seqid, oprot);
 			}
 			return null;
+		}
+	}
+
+	public boolean isEmpty(TBase tbase) {
+		Field[] tbaseFields = tbase.getClass().getFields();
+		if (tbaseFields.length == 1 && "metaDataMap" == tbaseFields[0].getName()) {
+			return true;
+		} else {
+			return false;
 		}
 	}
 
