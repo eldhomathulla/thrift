@@ -1,17 +1,24 @@
-package org.apache.thrift;
+package org.apache.thrift.cache;
 
 import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.thrift.TBase;
+
 public class TCacheKey {
 
 	private Map<String, Object> args = new HashMap<String, Object>();
 	private static final String FUNCTION_NAME = "function_name";
 
-	public TCacheKey() {
-
+	public TCacheKey(String functionName) {
+		this.addArg(FUNCTION_NAME, functionName);
+	}
+	
+	
+	public TCacheKey(TCacheKey tCacheKey) {
+		this.args=tCacheKey.getArgs();
 	}
 
 	public TCacheKey(TBase argsTbase) {
@@ -28,6 +35,10 @@ public class TCacheKey {
 
 	public void addArg(String arg, Object argValue) {
 		this.getArgs().put(arg, argValue);
+	}
+	
+	public String getFunctionName() {
+		return (String) args.get(FUNCTION_NAME);
 	}
 
 	@Override

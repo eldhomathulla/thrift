@@ -22,11 +22,11 @@ package org.apache.thrift.server;
 import java.util.Optional;
 
 import org.apache.thrift.ProcessFunction;
-import org.apache.thrift.TCache;
 import org.apache.thrift.TMultiplexedProcessor;
 import org.apache.thrift.TProcessor;
 import org.apache.thrift.TProcessorFactory;
 import org.apache.thrift.TServiceClient;
+import org.apache.thrift.cache.TCache;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TProtocolFactory;
 import org.apache.thrift.transport.TServerTransport;

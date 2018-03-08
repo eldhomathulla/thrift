@@ -4,6 +4,8 @@ import java.lang.reflect.Field;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
+import org.apache.thrift.cache.TCache;
+import org.apache.thrift.cache.TCacheKey;
 import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
 import org.apache.thrift.protocol.TProtocol;
@@ -62,6 +64,7 @@ public abstract class ProcessFunction<I, T extends TBase> {
 			if (!isEmpty(result)) {
 				cache.ifPresent((TCache tCache) -> tCache.write(new TCacheKey(args), result));
 			}
+			cache.ifPresent((TCache tCache)->tCache.postProcess(new TCacheKey(args)));
 			return result;
 		} catch (TException tex) {
 			LOGGER.error("Internal error processing " + getMethodName(), tex);
