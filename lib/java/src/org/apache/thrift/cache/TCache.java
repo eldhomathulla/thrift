@@ -1,26 +1,29 @@
 package org.apache.thrift.cache;
 
-import java.util.List;
 import java.util.Map;
 
 import org.apache.thrift.TBase;
+import org.apache.thrift.TException;
 
 public interface TCache {
 
-	public void write(TCacheKey key, TBase value);
+	public void write(TCacheKey key, @SuppressWarnings("rawtypes") TBase value) throws TException;
 
-	public TBase read(TCacheKey key);
+	@SuppressWarnings("rawtypes")
+	public TBase read(TCacheKey key) throws TException;
 
-	public void delete(TCacheKey key);
+	public void delete(TCacheKey key) throws TException;
 
-	public void delete(TCacheKey key, boolean partial) throws TCacheFunctionNotImplemented;
+	public void delete(TCacheKey key, boolean partial) throws TException;
 	
-	public void deleteAll();
+	public void deleteAll() throws TException;
 
-	public Map<TCacheKey, TBase> readAll();
+	@SuppressWarnings("rawtypes")
+	public Map<TCacheKey, TBase> readAll() throws TException;
 
-	public List<TBase> readFromPartialKey(TCacheKey partialKey) throws TCacheFunctionNotImplemented;
+	@SuppressWarnings("rawtypes")
+	public Map<TCacheKey, TBase> readFromPartialKey(TCacheKey partialKey) throws TException;
 	
-	public void postProcess(TCacheKey tCacheKey); 
+	public void postProcess(TCacheKey tCacheKey) throws TException; 
 
 }

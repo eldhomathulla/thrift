@@ -16,6 +16,9 @@ public class TCacheKey {
 		this.addArg(FUNCTION_NAME, functionName);
 	}
 	
+	public TCacheKey() {
+		
+	}
 	
 	public TCacheKey(TCacheKey tCacheKey) {
 		this.args=tCacheKey.getArgs();
@@ -37,7 +40,7 @@ public class TCacheKey {
 		this.getArgs().put(arg, argValue);
 	}
 	
-	public String getFunctionName() {
+	public String functionName() {
 		return (String) args.get(FUNCTION_NAME);
 	}
 
@@ -51,6 +54,10 @@ public class TCacheKey {
 
 	public Map<String, Object> getArgs() {
 		return args;
+	}
+	
+	public  void setArgs(Map<String, Object> args) {
+		this.args=args;
 	}
 
 	@Override

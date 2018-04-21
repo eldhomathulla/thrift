@@ -1,10 +1,10 @@
 package org.apache.thrift.cache;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.thrift.TBase;
+import org.apache.thrift.TException;
 
 public abstract class DefaultCache implements TCache {
 	protected CacheConfiguration cacheConfiguration;
@@ -14,47 +14,55 @@ public abstract class DefaultCache implements TCache {
 	}
 
 	@Override
-	public void write(TCacheKey key, TBase value) {
+	public void write(TCacheKey key, TBase value) throws TException {
+		if(cacheConfiguration.isCacheAll() || cacheConfiguration.shouldCacheFunction(key.functionName())) {
+			this.writeToCache(key, value);
+		}
+	}
+
+	@Override
+	public TBase read(TCacheKey key) throws TException {
+		if(cacheConfiguration.isCacheAll() || cacheConfiguration.shouldCacheFunction(key.functionName())) {
+			return readFromCache(key);
+		}
+		return null;
+	}
+
+	@Override
+	public void delete(TCacheKey key) throws TException {
 		// TODO Auto-generated method stub
 
 	}
 
 	@Override
-	public TBase read(TCacheKey key) {
+	public void delete(TCacheKey key, boolean partial) throws TCacheFunctionNotImplementedException, TException {
+		if (!partial) {
+			delete(key);
+		}
+	}
+
+	@Override
+	public void deleteAll() throws TException {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public Map<TCacheKey, TBase> readAll() throws TException {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public void delete(TCacheKey key) {
-		// TODO Auto-generated method stub
+	public Map<TCacheKey, TBase> readFromPartialKey(TCacheKey partialKey)
+			throws TCacheFunctionNotImplementedException, TException {
+		throw new TCacheFunctionNotImplementedException("readFromPartialKey function has not been implemented");
 	}
 
 	@Override
-	public List<TBase> readFromPartialKey(TCacheKey partialKey) throws TCacheFunctionNotImplemented {
-		throw new TCacheFunctionNotImplemented("readPartial Function Not Implemented");
-	}
-
-	@Override
-	public void delete(TCacheKey key, boolean partial) {
-	}
-
-	@Override
-	public void deleteAll() {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public Map<TCacheKey, TBase> readAll() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public void postProcess(TCacheKey tCacheKey) {
+	public void postProcess(TCacheKey tCacheKey) throws TException {
 		FunctionCacheConfiguration functionCacheConfiguration = this.cacheConfiguration
-				.getFunctionCacheConfiguration(tCacheKey.getFunctionName()).orElseGet(() -> null);
+				.getFunctionCacheConfiguration(tCacheKey.functionName()).orElseGet(() -> null);
 		if (functionCacheConfiguration != null) {
 			for (DependentCacheFunctionConfiguration dependentFunction : functionCacheConfiguration
 					.getDependentCacheFunctionConfiguration()) {
@@ -72,5 +80,13 @@ public abstract class DefaultCache implements TCache {
 			}
 		}
 	}
-
+	
+	protected void writeToCache(TCacheKey key, TBase value) throws TException {
+		
+	}
+	
+	protected TBase readFromCache(TCacheKey key) throws TException {
+		return null;
+	}
+	
 }

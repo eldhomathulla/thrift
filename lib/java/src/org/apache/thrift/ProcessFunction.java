@@ -40,7 +40,13 @@ public abstract class ProcessFunction<I, T extends TBase> {
 		@SuppressWarnings("rawtypes")
 		TBase result = null;
 		try {
-			result = cache.map((TCache tCache) -> tCache.read(new TCacheKey(args))).orElseGet(() -> {
+			result = cache.map((TCache tCache) -> {
+				try {
+					return tCache.read(new TCacheKey(args));
+				} catch (TException e1) {
+					throw new RuntimeException(e1);
+				}
+			}).orElseGet(() -> {
 				try {
 					return processResult(args, iface, oprot, seqid);
 				} catch (TException e) {
@@ -62,9 +68,21 @@ public abstract class ProcessFunction<I, T extends TBase> {
 		try {
 			TBase result = getResult(iface, args);
 			if (!isEmpty(result)) {
-				cache.ifPresent((TCache tCache) -> tCache.write(new TCacheKey(args), result));
+				cache.ifPresent((TCache tCache) -> {
+					try {
+						tCache.write(new TCacheKey(args), result);
+					} catch (TException e) {
+						throw new RuntimeException(e);
+					}
+				});
 			}
-			cache.ifPresent((TCache tCache)->tCache.postProcess(new TCacheKey(args)));
+			cache.ifPresent((TCache tCache)->{
+				try {
+					tCache.postProcess(new TCacheKey(args));
+				} catch (TException e) {
+					throw new RuntimeException(e);
+				}
+			});
 			return result;
 		} catch (TException tex) {
 			LOGGER.error("Internal error processing " + getMethodName(), tex);

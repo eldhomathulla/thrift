@@ -7,6 +7,11 @@ public class CacheConfigurationBuilder {
 	public FunctionCacheConfigurationBuilder createFunctionConfiguration(String functionName) {
 		return new FunctionCacheConfigurationBuilder(this,functionName);
 	}
+	
+	public CacheConfigurationBuilder addConfiguration(String configName,Object configValue) {
+		cacheConfiguration.addConfiguration(configName, configValue);
+		return this;
+	}
 
 	public CacheConfiguration getCacheConfiguration() {
 		return cacheConfiguration;
