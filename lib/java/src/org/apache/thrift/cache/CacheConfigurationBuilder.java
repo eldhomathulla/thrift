@@ -21,12 +21,12 @@ public class CacheConfigurationBuilder {
 	public CacheConfiguration getCacheConfiguration() {
 		return cacheConfiguration;
 	}
-	
+
 	public CacheConfigurationBuilder enableCacheAll() {
 		cacheConfiguration.setCacheAll(true);
 		return this;
 	}
-	
+
 	public CacheConfigurationBuilder disableCacheAll() {
 		cacheConfiguration.setCacheAll(false);
 		return this;
@@ -39,8 +39,9 @@ public class CacheConfigurationBuilder {
 					dependentFunctions.addAll(entry.getValue().getDependentCacheFunctionConfiguration().stream()
 							.map(DependentCacheFunctionConfiguration::getFunctionName).collect(Collectors.toSet()));
 				});
-		dependentFunctions.parallelStream().forEach((String functionName) -> cacheConfiguration
-				.getFunctionCacheConfiguration(functionName).get().setReCalculate(true));
+		dependentFunctions.parallelStream().forEach(
+				(String functionName) -> cacheConfiguration.getFunctionCacheConfiguration(functionName).ifPresent(
+						(FunctionCacheConfiguration fununctionConfig) -> fununctionConfig.setReCalculate(true)));
 		return cacheConfiguration;
 	}
 

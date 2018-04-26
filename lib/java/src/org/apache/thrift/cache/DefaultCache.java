@@ -60,12 +60,11 @@ public abstract class DefaultCache implements TCache {
 	@Override
 	public TBase read(TCacheKey key) throws TException {
 		LOGGER.info("reading from cache " + key);
-		TBase result = null;
 		if (cacheConfiguration.isCacheAll() || cacheConfiguration.shouldCacheFunction(key.functionName())) {
-			result = readFromCache(key);
+			return readFromCache(key);
 		}
 		LOGGER.info("Key " + key + " not found in cache");
-		return result;
+		return null;
 	}
 
 	@Override
@@ -127,7 +126,9 @@ public abstract class DefaultCache implements TCache {
 	}
 
 	/**
-	 * Creating runnable instance containing the post process actions like deletion of dependent cache entries and corresponding cache re population
+	 * Creating runnable instance containing the post process actions like deletion
+	 * of dependent cache entries and corresponding cache re population
+	 * 
 	 * @param functionCacheKey
 	 * @param dependentFunction
 	 * @return
@@ -174,7 +175,9 @@ public abstract class DefaultCache implements TCache {
 	}
 
 	/**
-	 * Function called for re populating the cache when the function entries are deleted
+	 * Function called for re populating the cache when the function entries are
+	 * deleted
+	 * 
 	 * @param functionCacheKey
 	 * @param fieldMappings
 	 * @param dependentFunctionActionHalder
@@ -267,10 +270,10 @@ public abstract class DefaultCache implements TCache {
 		Object value;
 		String key = fieldMapping.getKey();
 		if (key.contains(".")) {
-			
+
 			// getting value when the mapping key for the executed function is for a nested
 			// value. For example: value.value1.value2 : valueDependent
-			
+
 			String[] fields = key.split("\\.");
 			value = tCacheKey.getArgs().get(fields[0]);
 			for (int i = 1; i < fields.length; i++) {
