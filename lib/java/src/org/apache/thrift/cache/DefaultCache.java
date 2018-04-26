@@ -14,7 +14,8 @@ import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.function.Supplier;
+import java.util.concurrent.locks.Lock;
+import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -27,9 +28,10 @@ public abstract class DefaultCache implements TCache {
 	protected CacheConfiguration cacheConfiguration;
 	private ExecutorService executorService;
 	private Map<String, List<DependentFunctionActionHolder>> dependentFunctionExecutions = new ConcurrentHashMap<>();
-	private Supplier<List<DependentFunctionActionHolder>> dependentFunctionActionHolderListSupplier = () -> Collections
-			.synchronizedList(new LinkedList<>());
+	private Function<String, List<DependentFunctionActionHolder>> dependentFunctionActionHolderListSupplier = (
+			String str) -> Collections.synchronizedList(new LinkedList<>());
 	private Map<String, Object> ifaces = new HashMap<>();
+	private ThriftLockFactory thriftLockFactory = new ThriftLockFactory();
 	protected int nThreads = 5;
 
 	public DefaultCache(CacheConfiguration cacheConfiguration) {
@@ -39,7 +41,7 @@ public abstract class DefaultCache implements TCache {
 				.forEach((FunctionCacheConfiguration functionConfig) -> {
 					if (functionConfig.isReCalculate()) {
 						dependentFunctionExecutions.put(functionConfig.getFunctionName(),
-								dependentFunctionActionHolderListSupplier.get());
+								dependentFunctionActionHolderListSupplier.apply(functionConfig.getFunctionName()));
 					}
 				});
 	}
@@ -47,6 +49,12 @@ public abstract class DefaultCache implements TCache {
 	public DefaultCache(CacheConfiguration cacheConfiguration, Object... ifaces) {
 		this(cacheConfiguration);
 		Arrays.stream(ifaces).forEach((Object iface) -> addIface(iface));
+	}
+
+	public DefaultCache(CacheConfiguration cacheConfiguration, ThriftLockFactory thriftLockFactory, Object... ifaces) {
+		this(cacheConfiguration);
+		Arrays.stream(ifaces).forEach((Object iface) -> addIface(iface));
+		this.thriftLockFactory = thriftLockFactory;
 	}
 
 	@Override
@@ -115,7 +123,8 @@ public abstract class DefaultCache implements TCache {
 				if (dependentFunctionExecutions.containsKey(functionCacheConfiguration.getFunctionName())) {
 					functionExecutions = dependentFunctionExecutions.get(functionCacheConfiguration.getFunctionName());
 				} else {
-					functionExecutions = dependentFunctionActionHolderListSupplier.get();
+					functionExecutions = dependentFunctionActionHolderListSupplier
+							.apply(functionCacheConfiguration.getFunctionName());
 					dependentFunctionExecutions.put(functionCacheConfiguration.getFunctionName(), functionExecutions);
 				}
 				functionExecutions.add(new DependentFunctionActionHolder(tCacheKey, iFaceClassName,
@@ -207,13 +216,19 @@ public abstract class DefaultCache implements TCache {
 
 		if (rePolulate) {
 			executorService.execute(() -> {
-				TBase result = getResult(dependentFunctionActionHalder);
-				LOGGER.info("repopulating cache :" + dependentFunctionActionHalder.gettCacheKey());
 				try {
-					write(dependentFunctionActionHalder.gettCacheKey(), result);
+					Lock lock = thriftLockFactory.getLock(dependentFunctionActionHalder.gettCacheKey().toString());
+					lock.lock();
+					if (read(dependentFunctionActionHalder.gettCacheKey()) == null) {
+						TBase result = getResult(dependentFunctionActionHalder);
+						LOGGER.info("repopulating cache :" + dependentFunctionActionHalder.gettCacheKey());
+						write(dependentFunctionActionHalder.gettCacheKey(), result);
+					}
+					lock.unlock();
 				} catch (TException e) {
 					throw new TCacheException(e);
 				}
+
 			});
 		}
 	}
@@ -303,12 +318,12 @@ public abstract class DefaultCache implements TCache {
 
 	protected abstract TBase readFromCache(TCacheKey key) throws TException;
 
-	public Supplier<List<DependentFunctionActionHolder>> getDependentFunctionActionHolderListSupplier() {
+	public Function<String, List<DependentFunctionActionHolder>> getDependentFunctionActionHolderListSupplier() {
 		return dependentFunctionActionHolderListSupplier;
 	}
 
 	public void setDependentFunctionActionHolderListSupplier(
-			Supplier<List<DependentFunctionActionHolder>> dependentFunctionActionHolderListSupplier) {
+			Function<String, List<DependentFunctionActionHolder>> dependentFunctionActionHolderListSupplier) {
 		this.dependentFunctionActionHolderListSupplier = dependentFunctionActionHolderListSupplier;
 	}
 
