@@ -76,9 +76,10 @@ public abstract class ProcessFunction<I, T extends TBase> {
 					}
 				});
 			}
-			cache.ifPresent((TCache tCache)->{
+			cache.ifPresent((TCache tCache) -> {
 				try {
-					tCache.postProcess(new TCacheKey(args));
+					tCache.postProcess(new TCacheKey(args), iface.getClass().getName(), this.getClass().getName(),
+							args.getClass().getName());
 				} catch (TException e) {
 					throw new RuntimeException(e);
 				}

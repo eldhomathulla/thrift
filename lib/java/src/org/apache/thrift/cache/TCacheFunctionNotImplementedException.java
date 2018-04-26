@@ -1,7 +1,5 @@
 package org.apache.thrift.cache;
 
-import org.apache.thrift.TException;
-
 public class TCacheFunctionNotImplementedException extends RuntimeException {
 
 	/**

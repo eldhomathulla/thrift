@@ -37,16 +37,6 @@ public class CacheConfiguration {
 		return this.configurations.get(configName);
 	}
 	
-	public CacheConfiguration enableCacheAll() {
-		this.setCacheAll(true);
-		return this;
-	}
-	
-	public CacheConfiguration disableCacheAll() {
-		this.setCacheAll(false);
-		return this;
-	}
-
 	public boolean isCacheAll() {
 		return cacheAll;
 	}
@@ -57,6 +47,10 @@ public class CacheConfiguration {
 
 	public boolean shouldCacheFunction(String functionName) {
 		return this.functionConfigurations.containsKey(functionName);
+	}
+	
+	public Map<String, FunctionCacheConfiguration> getFunctionConfigurations(){
+		return this.functionConfigurations;
 	}
 
 }

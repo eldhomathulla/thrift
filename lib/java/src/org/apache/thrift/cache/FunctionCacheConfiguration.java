@@ -7,6 +7,7 @@ public class FunctionCacheConfiguration {
 
 	private String functionName;
 	private List<DependentCacheFunctionConfiguration> dependentFunctions = new ArrayList<>();
+	private boolean reCalculate=false;
 
 	public FunctionCacheConfiguration(String functionName) {
 		this.setFunctionName(functionName);
@@ -26,6 +27,14 @@ public class FunctionCacheConfiguration {
 	
 	public List<DependentCacheFunctionConfiguration> getDependentCacheFunctionConfiguration(){
 		return this.dependentFunctions;
+	}
+
+	public boolean isReCalculate() {
+		return reCalculate;
+	}
+
+	public void setReCalculate(boolean reCalculate) {
+		this.reCalculate = reCalculate;
 	}
 
 }

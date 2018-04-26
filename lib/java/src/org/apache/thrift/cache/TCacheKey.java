@@ -7,21 +7,26 @@ import java.util.Map;
 
 import org.apache.thrift.TBase;
 
+/**
+ * 
+ * Used as key for the TCache. Contains all parameters and it values for the corresponding functions.
+ *
+ */
 public class TCacheKey {
 
 	private Map<String, Object> args = new HashMap<String, Object>();
-	private static final String FUNCTION_NAME = "function_name";
+	public static final String FUNCTION_NAME = "function_name";
 
 	public TCacheKey(String functionName) {
 		this.addArg(FUNCTION_NAME, functionName);
 	}
-	
+
 	public TCacheKey() {
-		
+
 	}
-	
+
 	public TCacheKey(TCacheKey tCacheKey) {
-		this.args=tCacheKey.getArgs();
+		this.args = tCacheKey.getArgs();
 	}
 
 	public TCacheKey(TBase argsTbase) {
@@ -29,7 +34,9 @@ public class TCacheKey {
 		args.put(FUNCTION_NAME, argsTbase.getClass().getSimpleName().replaceFirst("_args$", ""));
 		Arrays.stream(argsFields).forEach((Field field) -> {
 			try {
-				this.getArgs().put(field.getName(), field.get(argsTbase));
+				if (!field.getName().equals("metaDataMap")) {
+					this.getArgs().put(field.getName(), field.get(argsTbase));
+				}
 			} catch (IllegalArgumentException | IllegalAccessException e) {
 
 			}
@@ -39,7 +46,7 @@ public class TCacheKey {
 	public void addArg(String arg, Object argValue) {
 		this.getArgs().put(arg, argValue);
 	}
-	
+
 	public String functionName() {
 		return (String) args.get(FUNCTION_NAME);
 	}
@@ -55,9 +62,15 @@ public class TCacheKey {
 	public Map<String, Object> getArgs() {
 		return args;
 	}
-	
-	public  void setArgs(Map<String, Object> args) {
-		this.args=args;
+
+	public void setArgs(Map<String, Object> args) {
+		this.args = args;
+	}
+
+	public Map<String, Object> fields() {
+		Map<String, Object> fields = new HashMap<>(args);
+		fields.remove(FUNCTION_NAME);
+		return fields;
 	}
 
 	@Override
@@ -67,6 +80,6 @@ public class TCacheKey {
 
 	@Override
 	public String toString() {
-		return "TCacheKey: \n"+args.toString();
+		return "TCacheKey: \n" + args.toString();
 	}
 }
