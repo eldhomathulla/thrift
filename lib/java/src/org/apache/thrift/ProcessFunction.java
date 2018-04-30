@@ -42,6 +42,7 @@ public abstract class ProcessFunction<I, T extends TBase> {
 		@SuppressWarnings("rawtypes")
 		TBase result = null;
 		try {
+			@SuppressWarnings("rawtypes")
 			Supplier<TBase> getResult = createGetResultSupplier(args, iface, oprot, seqid);
 			result = cache.map((TCache tCache) -> {
 				try {

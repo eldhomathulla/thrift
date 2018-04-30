@@ -69,7 +69,7 @@ public abstract class TServer {
 
 		@SuppressWarnings("unchecked")
 		public T cache(TCache cache) {
-			this.cache = Optional.of(cache);
+			this.cache = Optional.ofNullable(cache);
 			return (T) this;
 		}
 

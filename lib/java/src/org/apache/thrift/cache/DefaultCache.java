@@ -45,14 +45,18 @@ public abstract class DefaultCache implements TCache {
 		if (dependentFunctionActionHolderListSupplier != null) {
 			this.dependentFunctionActionHolderListSupplier = dependentFunctionActionHolderListSupplier;
 		}
-		cacheConfiguration.getFunctionConfigurations().values().stream()
-				.forEach((FunctionCacheConfiguration functionConfig) -> {
-					if (functionConfig.isReCalculate()) {
-						dependentFunctionExecutions.put(functionConfig.getFunctionName(),
-								dependentFunctionActionHolderListSupplier
-										.apply(functionConfig.getFunctionName() + DEPENDENT_LIST_POST_FIX));
-					}
-				});
+		try {
+			cacheConfiguration.getFunctionConfigurations().values().stream()
+					.forEach((FunctionCacheConfiguration functionConfig) -> {
+						if (functionConfig.isReCalculate()) {
+							dependentFunctionExecutions.put(functionConfig.getFunctionName(),
+									dependentFunctionActionHolderListSupplier
+											.apply(functionConfig.getFunctionName() + DEPENDENT_LIST_POST_FIX));
+						}
+					});
+		} catch (NullPointerException ne) {
+			LOGGER.log(Level.SEVERE, "Something not right", ne);
+		}
 	}
 
 	public DefaultCache(CacheConfiguration cacheConfiguration,
@@ -104,6 +108,7 @@ public abstract class DefaultCache implements TCache {
 			ReadWriteLock lock = thriftLockFactory.getLock(key.toString());
 			lock.writeLock().lock();
 			try {
+				long before = System.currentTimeMillis();
 				TBase result = readFromCache(key);
 				if (result == null) {
 					result = getResult.get();
