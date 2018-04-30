@@ -3,8 +3,10 @@ package org.apache.thrift;
 import java.lang.reflect.Field;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 import org.apache.thrift.cache.TCache;
+import org.apache.thrift.cache.TCacheException;
 import org.apache.thrift.cache.TCacheKey;
 import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
@@ -40,18 +42,15 @@ public abstract class ProcessFunction<I, T extends TBase> {
 		@SuppressWarnings("rawtypes")
 		TBase result = null;
 		try {
+			Supplier<TBase> getResult = createGetResultSupplier(args, iface, oprot, seqid);
 			result = cache.map((TCache tCache) -> {
 				try {
-					return tCache.read(new TCacheKey(args));
+					return tCache.read(new TCacheKey(args), getResult);
 				} catch (TException e1) {
 					throw new RuntimeException(e1);
 				}
 			}).orElseGet(() -> {
-				try {
-					return processResult(args, iface, oprot, seqid);
-				} catch (TException e) {
-					throw new RuntimeException(e);
-				}
+				return getResult.get();
 			});
 		} catch (NoSuchElementException ne) {
 			return;
@@ -96,6 +95,41 @@ public abstract class ProcessFunction<I, T extends TBase> {
 			}
 			return null;
 		}
+	}
+
+	private Supplier<TBase> createGetResultSupplier(T args, I iface, TProtocol oprot, int seqid) {
+		return () -> {
+			try {
+				TBase result = getResult(iface, args);
+				cache.ifPresent((TCache tCache) -> {
+					try {
+						tCache.postProcess(new TCacheKey(args), iface.getClass().getName(), this.getClass().getName(),
+								args.getClass().getName());
+					} catch (TException e) {
+						throw new RuntimeException(e);
+					}
+				});
+				return result;
+			} catch (TException tex) {
+				LOGGER.error("Internal error processing " + getMethodName(), tex);
+				try {
+					handleException(seqid, oprot);
+				} catch (TException e) {
+					throw new TCacheException(e);
+				}
+				return null;
+			} catch (RuntimeException rex) {
+				LOGGER.error("Internal error processing " + getMethodName(), rex);
+				if (handleRuntimeExceptions()) {
+					try {
+						handleException(seqid, oprot);
+					} catch (TException e) {
+						throw new TCacheException(e);
+					}
+				}
+				return null;
+			}
+		};
 	}
 
 	public boolean isEmpty(TBase tbase) {

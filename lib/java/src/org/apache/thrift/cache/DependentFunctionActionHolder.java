@@ -7,11 +7,16 @@ public class DependentFunctionActionHolder {
 	private String processFunctionClassName;
 	private String argsClassName;
 
-	public DependentFunctionActionHolder(TCacheKey tCacheKey, String iFaceClassName,String processFunctionClassName,String argsClassName) {
+	public DependentFunctionActionHolder(TCacheKey tCacheKey, String iFaceClassName, String processFunctionClassName,
+			String argsClassName) {
 		this.settCacheKey(tCacheKey);
 		this.setiFaceClassName(iFaceClassName);
 		this.setProcessFunctionClassName(processFunctionClassName);
 		this.setArgsClassName(argsClassName);
+	}
+
+	public DependentFunctionActionHolder() {
+
 	}
 
 	public TCacheKey gettCacheKey() {

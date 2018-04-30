@@ -24,61 +24,67 @@ public class TestTCache {
 
 	@Test
 	public void testPostProcessBasic() throws TException {
-		CacheConfigurationBuilder cacheConfigurationBuilder=new CacheConfigurationBuilder();
-		CacheConfiguration cacheConfiguration=cacheConfigurationBuilder.createFunctionConfiguration("test1").createDependentFunction("test2").addFieldMapping("id", "testId").build().build().build();
-		TCache tCache=new TestCache(cacheConfiguration);
-		TCacheKey tCacheKey=new TCacheKey("test1");
+		CacheConfigurationBuilder cacheConfigurationBuilder = new CacheConfigurationBuilder();
+		CacheConfiguration cacheConfiguration = cacheConfigurationBuilder.createFunctionConfiguration("test1")
+				.createDependentFunction("test2").addFieldMapping("id", "testId").build().build().build();
+		TCache tCache = new TestCache(cacheConfiguration);
+		TCacheKey tCacheKey = new TCacheKey("test1");
 		tCacheKey.addArg("id", "first");
 		tCache.postProcess(tCacheKey, null, null, null);
-		List<TCacheKey> expected=new ArrayList<>(1);
-		TCacheKey tCacheKey2=new TCacheKey("test2");
+		List<TCacheKey> expected = new ArrayList<>(1);
+		TCacheKey tCacheKey2 = new TCacheKey("test2");
 		tCacheKey2.addArg("testId", "first");
 		expected.add(tCacheKey2);
 		assertEquals(expected, ((TestCache) tCache).getDeleteCalls());
 	}
-	
+
 	@Test
 	public void testPostProcessNoDependentFunctions() throws TException {
-		CacheConfigurationBuilder cacheConfigurationBuilder=new CacheConfigurationBuilder();
-		CacheConfiguration cacheConfiguration=cacheConfigurationBuilder.createFunctionConfiguration("test1").build().build();
-		TCacheKey tCacheKey=new TCacheKey("test1");
+		CacheConfigurationBuilder cacheConfigurationBuilder = new CacheConfigurationBuilder();
+		CacheConfiguration cacheConfiguration = cacheConfigurationBuilder.createFunctionConfiguration("test1").build()
+				.build();
+		TCacheKey tCacheKey = new TCacheKey("test1");
 		tCacheKey.addArg("id", "first");
-		TCache tCache=new TestCache(cacheConfiguration);
+		TCache tCache = new TestCache(cacheConfiguration);
 		tCache.postProcess(tCacheKey, null, null, null);
 		assertTrue(((TestCache) tCache).getDeleteCalls().isEmpty());
 	}
-	
-	
-	static class TestCache extends DefaultCache{
-		private List<TCacheKey> deleteCalls=new LinkedList<>();
-		
+
+	@Test
+	public void testPostProcessRePopulation() {
+		CacheConfigurationBuilder cacheConfigurationBuilder = new CacheConfigurationBuilder();
+		CacheConfiguration cacheConfiguration = cacheConfigurationBuilder.createFunctionConfiguration("test1").build()
+				.build();
+	}
+
+	static class TestCache extends DefaultCache {
+		private List<TCacheKey> deleteCalls = new LinkedList<>();
 
 		public TestCache(CacheConfiguration cacheConfiguration) {
 			super(cacheConfiguration);
 			// TODO Auto-generated constructor stub
 		}
-		
+
 		@Override
 		public void delete(TCacheKey key, boolean partial) throws TCacheFunctionNotImplementedException, TException {
 			deleteCalls.add(key);
 			super.delete(key, partial);
 		}
-		
-		
-		public List<TCacheKey> getDeleteCalls(){
+
+		public List<TCacheKey> getDeleteCalls() {
 			return this.deleteCalls;
 		}
 
 		@Override
 		public void delete(TCacheKey key) throws TException {
 			// TODO Auto-generated method stub
-			
+
 		}
 
 		@Override
 		protected void writeToCache(TCacheKey key, TBase value) throws TException {
 			// TODO Auto-generated method stub
-			
+
 		}
 
 		@Override
@@ -86,9 +92,7 @@ public class TestTCache {
 			// TODO Auto-generated method stub
 			return null;
 		}
-		
-		
+
 	}
-	 
 
 }

@@ -15,7 +15,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -23,6 +25,8 @@ import org.apache.thrift.TBase;
 import org.apache.thrift.TException;
 
 public abstract class DefaultCache implements TCache {
+	private static final String DEPENDENT_LIST_POST_FIX = "_dependent_list";
+
 	protected static final Logger LOGGER = Logger.getLogger(DefaultCache.class.getCanonicalName());
 
 	protected CacheConfiguration cacheConfiguration;
@@ -34,32 +38,44 @@ public abstract class DefaultCache implements TCache {
 	private ThriftLockFactory thriftLockFactory = new ThriftLockFactory();
 	protected int nThreads = 5;
 
-	public DefaultCache(CacheConfiguration cacheConfiguration) {
+	public DefaultCache(CacheConfiguration cacheConfiguration,
+			Function<String, List<DependentFunctionActionHolder>> dependentFunctionActionHolderListSupplier) {
 		this.cacheConfiguration = cacheConfiguration;
 		executorService = Executors.newFixedThreadPool(nThreads);
+		if (dependentFunctionActionHolderListSupplier != null) {
+			this.dependentFunctionActionHolderListSupplier = dependentFunctionActionHolderListSupplier;
+		}
 		cacheConfiguration.getFunctionConfigurations().values().stream()
 				.forEach((FunctionCacheConfiguration functionConfig) -> {
 					if (functionConfig.isReCalculate()) {
 						dependentFunctionExecutions.put(functionConfig.getFunctionName(),
-								dependentFunctionActionHolderListSupplier.apply(functionConfig.getFunctionName()));
+								dependentFunctionActionHolderListSupplier
+										.apply(functionConfig.getFunctionName() + DEPENDENT_LIST_POST_FIX));
 					}
 				});
 	}
 
-	public DefaultCache(CacheConfiguration cacheConfiguration, Object... ifaces) {
-		this(cacheConfiguration);
+	public DefaultCache(CacheConfiguration cacheConfiguration,
+			Function<String, List<DependentFunctionActionHolder>> dependentFunctionActionHolderListSupplier,
+			Object... ifaces) {
+		this(cacheConfiguration, dependentFunctionActionHolderListSupplier);
 		Arrays.stream(ifaces).forEach((Object iface) -> addIface(iface));
 	}
 
-	public DefaultCache(CacheConfiguration cacheConfiguration, ThriftLockFactory thriftLockFactory, Object... ifaces) {
-		this(cacheConfiguration);
+	public DefaultCache(CacheConfiguration cacheConfiguration, ThriftLockFactory thriftLockFactory,
+			Function<String, List<DependentFunctionActionHolder>> dependentFunctionActionHolderListSupplier,
+			Object... ifaces) {
+		this(cacheConfiguration, dependentFunctionActionHolderListSupplier);
 		Arrays.stream(ifaces).forEach((Object iface) -> addIface(iface));
-		this.thriftLockFactory = thriftLockFactory;
+		if (thriftLockFactory != null) {
+			this.thriftLockFactory = thriftLockFactory;
+		}
 	}
 
 	@Override
 	public void write(TCacheKey key, TBase value) throws TException {
-		if (cacheConfiguration.isCacheAll() || cacheConfiguration.shouldCacheFunction(key.functionName())) {
+		if (!isEmpty(value)
+				&& (cacheConfiguration.isCacheAll() || cacheConfiguration.shouldCacheFunction(key.functionName()))) {
 			LOGGER.info("Writing to cache " + key);
 			this.writeToCache(key, value);
 		}
@@ -67,12 +83,40 @@ public abstract class DefaultCache implements TCache {
 
 	@Override
 	public TBase read(TCacheKey key) throws TException {
-		LOGGER.info("reading from cache " + key);
 		if (cacheConfiguration.isCacheAll() || cacheConfiguration.shouldCacheFunction(key.functionName())) {
-			return readFromCache(key);
+			LOGGER.info("reading from cache " + key);
+			ReadWriteLock lock = thriftLockFactory.getLock(key.toString());
+			lock.readLock().lock();
+			try {
+				return readFromCache(key);
+			} finally {
+				lock.readLock().unlock();
+			}
+		} else {
+			LOGGER.info("Key " + key + " not found in cache");
+			return null;
 		}
-		LOGGER.info("Key " + key + " not found in cache");
-		return null;
+	}
+
+	@Override
+	public TBase read(TCacheKey key, Supplier<TBase> getResult) throws TException {
+		if (cacheConfiguration.isCacheAll() || cacheConfiguration.shouldCacheFunction(key.functionName())) {
+			ReadWriteLock lock = thriftLockFactory.getLock(key.toString());
+			lock.writeLock().lock();
+			try {
+				TBase result = readFromCache(key);
+				if (result == null) {
+					result = getResult.get();
+					write(key, result);
+				}
+				return result;
+			} finally {
+				lock.writeLock().unlock();
+			}
+		} else {
+			return getResult.get();
+		}
+
 	}
 
 	@Override
@@ -124,7 +168,7 @@ public abstract class DefaultCache implements TCache {
 					functionExecutions = dependentFunctionExecutions.get(functionCacheConfiguration.getFunctionName());
 				} else {
 					functionExecutions = dependentFunctionActionHolderListSupplier
-							.apply(functionCacheConfiguration.getFunctionName());
+							.apply(functionCacheConfiguration.getFunctionName() + DEPENDENT_LIST_POST_FIX);
 					dependentFunctionExecutions.put(functionCacheConfiguration.getFunctionName(), functionExecutions);
 				}
 				functionExecutions.add(new DependentFunctionActionHolder(tCacheKey, iFaceClassName,
@@ -217,14 +261,15 @@ public abstract class DefaultCache implements TCache {
 		if (rePolulate) {
 			executorService.execute(() -> {
 				try {
-					Lock lock = thriftLockFactory.getLock(dependentFunctionActionHalder.gettCacheKey().toString());
-					lock.lock();
+					ReadWriteLock lock = thriftLockFactory
+							.getLock(dependentFunctionActionHalder.gettCacheKey().toString());
+					lock.writeLock().lock();
 					if (read(dependentFunctionActionHalder.gettCacheKey()) == null) {
 						TBase result = getResult(dependentFunctionActionHalder);
 						LOGGER.info("repopulating cache :" + dependentFunctionActionHalder.gettCacheKey());
 						write(dependentFunctionActionHalder.gettCacheKey(), result);
 					}
-					lock.unlock();
+					lock.writeLock().unlock();
 				} catch (TException e) {
 					throw new TCacheException(e);
 				}
@@ -338,6 +383,15 @@ public abstract class DefaultCache implements TCache {
 	public DefaultCache addIface(Object iface) {
 		this.getIfaces().put(iface.getClass().getName(), iface);
 		return this;
+	}
+
+	public boolean isEmpty(TBase tbase) {
+		Field[] tbaseFields = tbase.getClass().getFields();
+		if (tbaseFields.length == 1 && "metaDataMap" == tbaseFields[0].getName()) {
+			return true;
+		} else {
+			return false;
+		}
 	}
 
 }

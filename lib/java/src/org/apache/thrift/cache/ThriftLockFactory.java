@@ -2,28 +2,28 @@ package org.apache.thrift.cache;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Function;
 
 public class ThriftLockFactory {
 
-	private Map<String, Lock> locks = new HashMap<>();
-	private Function<String, Lock> createLock = (String lockName) -> new ReentrantLock();
+	private Map<String, ReadWriteLock> locks = new HashMap<>();
+	private Function<String, ReadWriteLock> createLock = (String lockName) -> new ReentrantReadWriteLock();
 
-	public ThriftLockFactory(Function<String, Lock> createLock) {
+	public ThriftLockFactory(Function<String, ReadWriteLock> createLock) {
 		this.createLock = createLock;
 	}
 
 	public ThriftLockFactory() {
 	}
 
-	public Lock getLock(String lockName) {
+	public ReadWriteLock getLock(String lockName) {
 		if (locks.containsKey(lockName)) {
 			return locks.get(lockName);
 		} else {
 			synchronized (locks) {
-				Lock lock = createLock.apply(lockName);
+				ReadWriteLock lock = createLock.apply(lockName);
 				locks.put(lockName, lock);
 				return lock;
 			}

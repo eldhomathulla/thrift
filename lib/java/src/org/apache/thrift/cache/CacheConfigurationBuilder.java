@@ -1,6 +1,7 @@
 package org.apache.thrift.cache;
 
 import java.util.HashSet;
+import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.Map.Entry;
@@ -29,6 +30,13 @@ public class CacheConfigurationBuilder {
 
 	public CacheConfigurationBuilder disableCacheAll() {
 		cacheConfiguration.setCacheAll(false);
+		return this;
+	}
+
+	public CacheConfigurationBuilder loadConfiguration(Properties props) {
+		props.stringPropertyNames().stream().forEach((String key) -> {
+			cacheConfiguration.addConfiguration(key, props.getProperty(key));
+		});
 		return this;
 	}
 
